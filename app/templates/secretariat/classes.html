@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import btn_supprimer %}
+{% block title %}Classes — ENSEA{% endblock %}
+
+{% block content %}
+<h1 class="page-title"><i class="bi bi-grid-3x3-gap"></i> Classes</h1>
+
+<div class="row">
+  <div class="col-md-4">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header"><i class="bi bi-plus-circle"></i> Nouvelle classe</div>
+      <div class="card-body">
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            <label class="form-label">{{ form.nom.label.text }}</label>
+            {{ form.nom(class="form-control", placeholder="ex. ISE1") }}
+            {% for e in form.nom.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+          </div>
+          {{ form.submit(class="btn btn-primary w-100") }}
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-header"><i class="bi bi-list-ul"></i> Liste ({{ classes|length }})</div>
+      <div class="card-body">
+        <table class="table table-hover datatable">
+          <thead>
+            <tr><th>Nom</th><th>Inscriptions</th><th>Enseignements</th><th class="text-end">Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for c in classes %}
+            <tr>
+              <td>
+                <a href="{{ url_for('secretariat.matieres_de_classe', classe_id=c.id) }}"
+                   class="text-decoration-none">
+                  <strong>{{ c.nom }}</strong>
+                </a>
+              </td>
+              <td><span class="badge bg-primary">{{ stats[c.id].inscriptions }}</span></td>
+              <td><span class="badge bg-info">{{ stats[c.id].enseignement_classes }}</span></td>
+              <td class="text-end">
+                <a href="{{ url_for('secretariat.etudiants', classe_id=c.id) }}"
+                   class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip"
+                   title="Voir les étudiants">
+                  <i class="bi bi-people"></i>
+                </a>
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                        data-bs-target="#editClasse{{ c.id }}">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                {{ btn_supprimer(url_for('secretariat.supprimer_classe', classe_id=c.id),
+                                  csrf_token=action_form.csrf_token._value()) }}
+
+                <div class="modal fade" id="editClasse{{ c.id }}" tabindex="-1">
+                  <div class="modal-dialog">
+                    <form method="POST" action="{{ url_for('secretariat.modifier_classe', classe_id=c.id) }}"
+                          class="modal-content">
+                      <input type="hidden" name="csrf_token" value="{{ action_form.csrf_token._value() }}">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Renommer la classe</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <input type="text" name="nom" class="form-control" value="{{ c.nom }}" required>
+                      </div>
+                      <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import btn_supprimer %}
+{% block title %}Types de note — ENSEA{% endblock %}
+
+{% block content %}
+<h1 class="page-title"><i class="bi bi-tags"></i> Types de note</h1>
+
+<div class="row">
+  <div class="col-md-4">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header"><i class="bi bi-plus-circle"></i> Nouveau type de note</div>
+      <div class="card-body">
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="mb-2"><label class="form-label">Enseignement / Classe</label>
+            {{ form.ens_classe_id(class="form-select") }}</div>
+          <div class="mb-3"><label class="form-label">Libellé</label>
+            {{ form.libelle(class="form-control", placeholder="ex. Devoir 1") }}</div>
+          {{ form.submit(class="btn btn-primary w-100") }}
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-header"><i class="bi bi-list-ul"></i> Liste ({{ types|length }})</div>
+      <div class="card-body">
+        <table class="table table-hover datatable">
+          <thead>
+            <tr><th>Année</th><th>Matière</th><th>Classe</th><th>Libellé</th>
+                <th>Date</th><th class="text-end">Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for tn, ec, mat, cls, ann in types %}
+            <tr>
+              <td><small class="text-muted">{{ ann.libelle }}</small></td>
+              <td><strong>{{ mat.nom }}</strong></td>
+              <td><span class="badge bg-primary">{{ cls.nom }}</span></td>
+              <td>{{ tn.libelle }}</td>
+              <td><small>{{ tn.date_creation.strftime('%d/%m/%Y') }}</small></td>
+              <td class="text-end">
+                <a href="{{ url_for('secretariat.visualiser_notes', type_note_id=tn.id) }}"
+                   class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="Voir les notes">
+                  <i class="bi bi-bar-chart"></i>
+                </a>
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                        data-bs-target="#editTn{{ tn.id }}">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                {{ btn_supprimer(url_for('secretariat.supprimer_type_note', tn_id=tn.id),
+                                  csrf_token=action_form.csrf_token._value()) }}
+
+                <div class="modal fade" id="editTn{{ tn.id }}" tabindex="-1">
+                  <div class="modal-dialog">
+                    <form method="POST" action="{{ url_for('secretariat.modifier_type_note', tn_id=tn.id) }}"
+                          class="modal-content">
+                      <input type="hidden" name="csrf_token" value="{{ action_form.csrf_token._value() }}">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Modifier le type de note</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <input type="text" name="libelle" class="form-control" value="{{ tn.libelle }}" required>
+                      </div>
+                      <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{# ============================================================================
+   Macros réutilisables
+   ============================================================================ #}
+
+{# Bouton de suppression avec confirmation (modal Bootstrap natif via confirm) #}
+{% macro btn_supprimer(url, label='Supprimer', csrf_token=None) %}
+  <form method="POST" action="{{ url }}" class="d-inline"
+        onsubmit="return confirm('Confirmer la suppression de cet élément ?');">
+    {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token }}">{% endif %}
+    <button type="submit" class="btn btn-sm btn-outline-danger"
+            data-bs-toggle="tooltip" title="{{ label }}">
+      <i class="bi bi-trash"></i>
+    </button>
+  </form>
+{% endmacro %}
+
+{# Bouton générique POST (ex. réinitialisation mot de passe) #}
+{% macro btn_action(url, icon='bi-arrow-clockwise', label='Action', cls='btn-outline-warning',
+                    msg='Confirmer cette action ?', csrf_token=None) %}
+  <form method="POST" action="{{ url }}" class="d-inline"
+        onsubmit="return confirm('{{ msg }}');">
+    {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token }}">{% endif %}
+    <button type="submit" class="btn btn-sm {{ cls }}"
+            data-bs-toggle="tooltip" title="{{ label }}">
+      <i class="bi {{ icon }}"></i>
+    </button>
+  </form>
+{% endmacro %}
+
+{# Modal d'édition générique #}
+{% macro modal_edit(id, title, body, submit_label='Enregistrer', action='') %}
+<div class="modal fade" id="{{ id }}" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="POST" action="{{ action }}" class="modal-content">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ title }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">{{ body }}</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="submit" class="btn btn-primary">{{ submit_label }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endmacro %}

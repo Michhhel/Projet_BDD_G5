@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import btn_supprimer, btn_action %}
+{% block title %}Étudiants — ENSEA{% endblock %}
+
+{% block content %}
+<h1 class="page-title"><i class="bi bi-people-fill"></i> Étudiants</h1>
+
+<div class="row">
+  <div class="col-md-4">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header"><i class="bi bi-person-plus"></i> Nouvel étudiant</div>
+      <div class="card-body">
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="mb-2"><label class="form-label">{{ form.nom.label.text }}</label>
+            {{ form.nom(class="form-control") }}</div>
+          <div class="mb-2"><label class="form-label">{{ form.prenom.label.text }}</label>
+            {{ form.prenom(class="form-control") }}</div>
+          <div class="mb-2"><label class="form-label">{{ form.email.label.text }}</label>
+            {{ form.email(class="form-control") }}</div>
+          <div class="mb-2"><label class="form-label">{{ form.annee_scolaire_id.label.text }}</label>
+            {{ form.annee_scolaire_id(class="form-select") }}</div>
+          <div class="mb-3"><label class="form-label">{{ form.classe_id.label.text }}</label>
+            {{ form.classe_id(class="form-select") }}</div>
+          {{ form.submit(class="btn btn-primary w-100") }}
+        </form>
+        <small class="text-muted d-block mt-2">
+          <i class="bi bi-info-circle"></i> Un mot de passe sera généré et envoyé par email.
+        </small>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-header"><i class="bi bi-upload"></i> Import Excel</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('secretariat.importer_etudiants') }}"
+              enctype="multipart/form-data">
+          {{ import_form.hidden_tag() }}
+          <div class="mb-2"><label class="form-label">Année</label>
+            {{ import_form.annee_scolaire_id(class="form-select") }}</div>
+          <div class="mb-2"><label class="form-label">Classe</label>
+            {{ import_form.classe_id(class="form-select") }}</div>
+          <p class="small text-muted">Colonnes : <code>nom</code>, <code>prenom</code>, <code>email</code></p>
+          {{ import_form.fichier(class="form-control mb-2") }}
+          {{ import_form.submit(class="btn btn-success w-100") }}
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-list-ul"></i> Liste ({{ etudiants|length }})</span>
+        <form class="d-flex gap-2" method="GET">
+          <select name="annee_id" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">— Toutes les années —</option>
+            {% for a in annees %}
+              <option value="{{ a.id }}" {% if f_annee==a.id %}selected{% endif %}>{{ a.libelle }}</option>
+            {% endfor %}
+          </select>
+          <select name="classe_id" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">— Toutes les classes —</option>
+            {% for c in classes %}
+              <option value="{{ c.id }}" {% if f_classe==c.id %}selected{% endif %}>{{ c.nom }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+      <div class="card-body">
+        <table class="table table-hover datatable">
+          <thead>
+            <tr><th>Nom</th><th>Prénom</th><th>Email</th><th>Classe</th><th>Année</th><th class="text-end">Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for etu, cls, ann in etudiants %}
+            <tr>
+              <td><strong>{{ etu.nom }}</strong></td>
+              <td>{{ etu.prenom }}</td>
+              <td><a href="mailto:{{ etu.email }}" class="text-decoration-none">{{ etu.email }}</a></td>
+              <td><span class="badge bg-primary">{{ cls.nom }}</span></td>
+              <td><small class="text-muted">{{ ann.libelle }}</small></td>
+              <td class="text-end">
+                <a href="{{ url_for('secretariat.notes_etudiant', etu_id=etu.id) }}"
+                   class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="Voir ses notes">
+                  <i class="bi bi-clipboard-data"></i>
+                </a>
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                        data-bs-target="#editEtu{{ etu.id }}">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                {{ btn_action(url_for('secretariat.reset_mdp_etudiant', etu_id=etu.id),
+                              icon='bi-key', label='Réinitialiser le mot de passe',
+                              cls='btn-outline-warning',
+                              msg='Générer un nouveau mot de passe pour cet étudiant ?',
+                              csrf_token=action_form.csrf_token._value()) }}
+                {{ btn_supprimer(url_for('secretariat.supprimer_etudiant', etu_id=etu.id),
+                                  csrf_token=action_form.csrf_token._value()) }}
+
+                <div class="modal fade" id="editEtu{{ etu.id }}" tabindex="-1">
+                  <div class="modal-dialog">
+                    <form method="POST" action="{{ url_for('secretariat.modifier_etudiant', etu_id=etu.id) }}"
+                          class="modal-content">
+                      <input type="hidden" name="csrf_token" value="{{ action_form.csrf_token._value() }}">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Modifier {{ etu.nom_complet }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="mb-2"><label class="form-label">Nom</label>
+                          <input type="text" name="nom" class="form-control" value="{{ etu.nom }}" required></div>
+                        <div class="mb-2"><label class="form-label">Prénom</label>
+                          <input type="text" name="prenom" class="form-control" value="{{ etu.prenom }}" required></div>
+                        <div class="mb-2"><label class="form-label">Email</label>
+                          <input type="email" name="email" class="form-control" value="{{ etu.email }}" required></div>
+                      </div>
+                      <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

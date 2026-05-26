@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import btn_supprimer %}
+{% block title %}Enseignants — ENSEA{% endblock %}
+
+{% block content %}
+<h1 class="page-title"><i class="bi bi-person-badge"></i> Enseignants</h1>
+
+<div class="row">
+  <div class="col-md-4">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header"><i class="bi bi-plus-circle"></i> Nouvel enseignant</div>
+      <div class="card-body">
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="mb-2">
+            <label class="form-label">{{ form.nom.label.text }}</label>
+            {{ form.nom(class="form-control") }}
+          </div>
+          <div class="mb-2">
+            <label class="form-label">{{ form.prenom.label.text }}</label>
+            {{ form.prenom(class="form-control") }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ form.email.label.text }}</label>
+            {{ form.email(class="form-control") }}
+          </div>
+          {{ form.submit(class="btn btn-primary w-100") }}
+        </form>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-header"><i class="bi bi-upload"></i> Import Excel</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('secretariat.importer_enseignants') }}"
+              enctype="multipart/form-data">
+          {{ import_form.hidden_tag() }}
+          <p class="small text-muted">Colonnes attendues : <code>nom</code>, <code>prenom</code>, <code>email</code></p>
+          {{ import_form.fichier(class="form-control mb-2") }}
+          {{ import_form.submit(class="btn btn-success w-100") }}
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-header"><i class="bi bi-list-ul"></i> Liste ({{ enseignants|length }})</div>
+      <div class="card-body">
+        <table class="table table-hover datatable">
+          <thead>
+            <tr><th>Nom</th><th>Prénom</th><th>Email</th><th class="text-end">Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for e in enseignants %}
+            <tr>
+              <td><strong>{{ e.nom }}</strong></td>
+              <td>{{ e.prenom }}</td>
+              <td><a href="mailto:{{ e.email }}" class="text-decoration-none">{{ e.email }}</a></td>
+              <td class="text-end">
+                <a href="mailto:{{ e.email }}" class="btn btn-sm btn-outline-info"
+                   data-bs-toggle="tooltip" title="Contacter">
+                  <i class="bi bi-envelope"></i>
+                </a>
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                        data-bs-target="#editEns{{ e.id }}">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                {{ btn_supprimer(url_for('secretariat.supprimer_enseignant', ens_id=e.id),
+                                  csrf_token=action_form.csrf_token._value()) }}
+
+                <div class="modal fade" id="editEns{{ e.id }}" tabindex="-1">
+                  <div class="modal-dialog">
+                    <form method="POST" action="{{ url_for('secretariat.modifier_enseignant', ens_id=e.id) }}"
+                          class="modal-content">
+                      <input type="hidden" name="csrf_token" value="{{ action_form.csrf_token._value() }}">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Modifier {{ e.nom_complet }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="mb-2"><label class="form-label">Nom</label>
+                          <input type="text" name="nom" class="form-control" value="{{ e.nom }}" required></div>
+                        <div class="mb-2"><label class="form-label">Prénom</label>
+                          <input type="text" name="prenom" class="form-control" value="{{ e.prenom }}" required></div>
+                        <div class="mb-2"><label class="form-label">Email</label>
+                          <input type="email" name="email" class="form-control" value="{{ e.email }}" required></div>
+                      </div>
+                      <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

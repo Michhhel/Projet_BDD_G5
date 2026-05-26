@@ -1,0 +1,179 @@
+/* =============================================================================
+   ENSEA — Feuille de style personnalisée
+   ============================================================================= */
+
+:root {
+  --ensea-primary:   #003366;   /* Bleu institutionnel */
+  --ensea-secondary: #0066CC;   /* Bleu clair */
+  --ensea-accent:    #FFC107;   /* Jaune accent */
+  --ensea-bg:        #F5F7FA;
+}
+
+/* ── Base ──────────────────────────────────────────────────────────────── */
+body {
+  background-color: var(--ensea-bg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ── Navbar ────────────────────────────────────────────────────────────── */
+.bg-ensea-primary { background-color: var(--ensea-primary) !important; }
+
+.navbar-dark .navbar-nav .nav-link {
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+}
+.navbar-dark .navbar-nav .nav-link:hover,
+.navbar-dark .navbar-nav .nav-link.active {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 0.25rem;
+}
+
+.navbar-brand { font-size: 1.25rem; }
+
+/* ── Pages d'authentification ──────────────────────────────────────────── */
+.page-auth {
+  background: linear-gradient(135deg, var(--ensea-primary) 0%, var(--ensea-secondary) 100%);
+  min-height: 100vh;
+}
+
+.page-auth .card {
+  border: none;
+  border-radius: 1rem;
+}
+
+.role-card {
+  transition: transform .2s, box-shadow .2s;
+}
+.role-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 1rem 3rem rgba(0,0,0,.175) !important;
+}
+
+/* ── Titres de page ────────────────────────────────────────────────────── */
+.page-title {
+  color: var(--ensea-primary);
+  font-weight: 600;
+  border-bottom: 3px solid var(--ensea-secondary);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ── Cards ─────────────────────────────────────────────────────────────── */
+.card {
+  border-radius: 0.5rem;
+}
+
+.card-header {
+  background-color: rgba(0, 51, 102, 0.05);
+  border-bottom: 2px solid rgba(0, 51, 102, 0.1);
+  font-weight: 600;
+  color: var(--ensea-primary);
+}
+
+/* Stat cards (dashboard) */
+.stat-card { transition: transform .2s; }
+.stat-card:hover { transform: translateY(-3px); }
+.stat-icon { font-size: 2.5rem; }
+
+/* Cartes matière (espace étudiant) */
+.matiere-card { transition: transform .2s, box-shadow .2s; }
+.matiere-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.1) !important;
+}
+
+/* ── Bannière d'accueil ────────────────────────────────────────────────── */
+.welcome-banner {
+  background: linear-gradient(135deg, var(--ensea-primary) 0%, var(--ensea-secondary) 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 0.5rem;
+}
+.welcome-banner h1, .welcome-banner p { color: white !important; }
+.welcome-banner .form-select { max-width: 250px; }
+
+/* ── Boutons ───────────────────────────────────────────────────────────── */
+.btn-primary {
+  background-color: var(--ensea-primary);
+  border-color: var(--ensea-primary);
+}
+.btn-primary:hover {
+  background-color: #002244;
+  border-color: #002244;
+}
+.btn-outline-primary {
+  color: var(--ensea-primary);
+  border-color: var(--ensea-primary);
+}
+.btn-outline-primary:hover {
+  background-color: var(--ensea-primary);
+  border-color: var(--ensea-primary);
+}
+
+/* ── Tables ────────────────────────────────────────────────────────────── */
+.table thead th {
+  background-color: rgba(0, 51, 102, 0.05);
+  border-bottom: 2px solid var(--ensea-secondary);
+  color: var(--ensea-primary);
+  font-weight: 600;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(0, 102, 204, 0.05);
+}
+
+/* DataTables overrides */
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dataTables_length select {
+  border-radius: 0.25rem;
+  border: 1px solid #ced4da;
+  padding: 0.25rem 0.5rem;
+}
+
+/* ── Badges ────────────────────────────────────────────────────────────── */
+.badge {
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+/* ── Formulaires ───────────────────────────────────────────────────────── */
+.form-label {
+  font-weight: 500;
+  color: #495057;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--ensea-secondary);
+  box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.15);
+}
+
+/* ── Alertes ───────────────────────────────────────────────────────────── */
+.alert {
+  border-left: 4px solid;
+}
+.alert-success { border-left-color: #198754; }
+.alert-danger  { border-left-color: #dc3545; }
+.alert-warning { border-left-color: #ffc107; }
+.alert-info    { border-left-color: #0dcaf0; }
+
+/* ── Spinner global ────────────────────────────────────────────────────── */
+.spinner-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .page-title { font-size: 1.5rem; }
+  .stat-icon { font-size: 2rem; }
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────── */
+footer {
+  background-color: white;
+}

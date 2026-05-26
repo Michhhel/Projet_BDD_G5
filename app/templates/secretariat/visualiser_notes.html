@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+{% block title %}Visualiser les notes — ENSEA{% endblock %}
+
+{% block content %}
+<h1 class="page-title"><i class="bi bi-bar-chart"></i> Visualisation des notes</h1>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <form method="GET" class="row g-2">
+      <div class="col-md-3">
+        <label class="form-label small">Année</label>
+        <select name="annee_id" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">— Toutes —</option>
+          {% for a in annees %}
+            <option value="{{ a.id }}" {% if annee_id==a.id %}selected{% endif %}>{{ a.libelle }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Classe</label>
+        <select name="classe_id" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">— Toutes —</option>
+          {% for c in classes %}
+            <option value="{{ c.id }}" {% if classe_id==c.id %}selected{% endif %}>{{ c.nom }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Matière</label>
+        <select name="matiere_id" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">— Toutes —</option>
+          {% for m in matieres %}
+            <option value="{{ m.id }}" {% if matiere_id==m.id %}selected{% endif %}>{{ m.nom }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Type de note</label>
+        <select name="type_note_id" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">— Sélectionner —</option>
+          {% for t in types_dispo %}
+            <option value="{{ t.id }}" {% if tn_id==t.id %}selected{% endif %}>{{ t.libelle }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if not type_note %}
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    Sélectionnez un <strong>type de note</strong> pour afficher les statistiques.
+  </div>
+{% else %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4>
+    <i class="bi bi-clipboard-data"></i>
+    {{ type_note.libelle }} —
+    <small class="text-muted">
+      {{ type_note.enseignement_classe.enseignement.matiere.nom }}
+      — {{ type_note.enseignement_classe.classe.nom }}
+      — {{ type_note.enseignement_classe.enseignement.annee_scolaire.libelle }}
+    </small>
+  </h4>
+  <div>
+    <a href="{{ url_for('secretariat.export_notes_excel', type_note_id=type_note.id) }}"
+       class="btn btn-sm btn-success"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+    <a href="{{ url_for('secretariat.export_notes_pdf', type_note_id=type_note.id) }}"
+       class="btn btn-sm btn-danger"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header">
+        <i class="bi bi-calculator"></i> Statistiques descriptives
+      </div>
+      <div class="card-body">
+        <div class="row text-center">
+          <div class="col-6 col-md-4 mb-2">
+            <div class="text-muted small">Effectif</div>
+            <div class="h4">{{ stats.effectif }}</div>
+          </div>
+          <div class="col-6 col-md-4 mb-2">
+            <div class="text-muted small">Moyenne</div>
+            <div class="h4 text-primary">{{ stats.moyenne|format_note }}</div>
+          </div>
+          <div class="col-6 col-md-4 mb-2">
+            <div class="text-muted small">Médiane</div>
+            <div class="h4">{{ stats.mediane|format_note }}</div>
+          </div>
+          <div class="col-6 col-md-4 mb-2">
+            <div class="text-muted small">Mode</div>
+            <div class="h4">{{ stats.mode|format_note }}</div>
+          </div>
+          <div class="col-6 col-md-4 mb-2">
+            <div class="text-muted small">Écart-type</div>
+            <div class="h4">{{ stats.ecart_type|format_note }}</div>
+          </div>
+          <div class="col-6 col-md-4 mb-2">
+            <div class="text-muted small">Min / Max</div>
+            <div class="h4">{{ stats.min|format_note }} / {{ stats.max|format_note }}</div>
+          </div>
+          <div class="col-6 col-md-4 mb-2">
+            <div class="text-muted small">Q1</div>
+            <div class="h4">{{ stats.q1|format_note }}</div>
+          </div>
+          <div class="col-6 col-md-4 mb-2">
+            <div class="text-muted small">Q3</div>
+            <div class="h4">{{ stats.q3|format_note }}</div>
+          </div>
+          <div class="col-6 col-md-4 mb-2">
+            <div class="text-muted small">Étendue</div>
+            <div class="h4">
+              {% if stats.min is not none and stats.max is not none %}
+                {{ '%.2f'|format(stats.max - stats.min) }}
+              {% else %} — {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header"><i class="bi bi-bar-chart"></i> Distribution des notes</div>
+      <div class="card-body"><canvas id="chartHisto" height="160"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header"><i class="bi bi-pie-chart"></i> Répartition par mention</div>
+      <div class="card-body"><canvas id="chartMentions" height="160"></canvas></div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header"><i class="bi bi-graph-up"></i> Boxplot</div>
+      <div class="card-body"><canvas id="chartBoxplot" height="160"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-list-ol"></i> Classement</span>
+    <div>
+      <label class="small">Filtre :</label>
+      <select id="filtreNotes" class="form-select form-select-sm d-inline-block" style="width:auto">
+        <option value="all">Tous</option>
+        <option value="10">≥ 10</option>
+        <option value="12">≥ 12</option>
+        <option value="14">≥ 14</option>
+        <option value="16">≥ 16</option>
+        <option value="-10">&lt; 10</option>
+      </select>
+    </div>
+  </div>
+  <div class="card-body">
+    <table class="table table-hover datatable" id="tableNotes">
+      <thead>
+        <tr><th>Rang</th><th>Nom</th><th>Prénom</th><th>Email</th><th>Note</th><th>Mention</th></tr>
+      </thead>
+      <tbody>
+        {% for n in notes_etudiants %}
+        <tr data-note="{{ n.note }}">
+          <td><span class="badge bg-{% if n.rang==1 %}warning text-dark{% elif n.rang==2 %}secondary{% elif n.rang==3 %}info{% else %}light text-dark{% endif %}">{{ n.rang }}</span></td>
+          <td><strong>{{ n.etudiant.nom }}</strong></td>
+          <td>{{ n.etudiant.prenom }}</td>
+          <td>{{ n.etudiant.email }}</td>
+          <td><span class="badge bg-{{ n.note|mention_class }}">{{ '%.2f'|format(n.note) }}/20</span></td>
+          <td>{{ n.note|mention }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if type_note %}
+<script>
+const histoLabels   = {{ histo_labels  | tojson }};
+const histoData     = {{ histo_data    | tojson }};
+const mentionLabels = {{ mention_labels| tojson }};
+const mentionData   = {{ mention_data  | tojson }};
+const stats         = {{ stats         | tojson }};
+
+new Chart(document.getElementById('chartHisto'), {
+  type: 'bar',
+  data: {
+    labels: histoLabels,
+    datasets: [{ label: 'Effectif', data: histoData, backgroundColor: 'rgba(0,102,204,0.7)' }],
+  },
+  options: { plugins: { legend: { display: false } } },
+});
+
+new Chart(document.getElementById('chartMentions'), {
+  type: 'doughnut',
+  data: {
+    labels: mentionLabels,
+    datasets: [{
+      data: mentionData,
+      backgroundColor: ['#198754','#0d6efd','#0dcaf0','#ffc107','#dc3545'],
+    }],
+  },
+});
+
+// Boxplot simplifié sur un bar chart horizontal
+const bp = document.getElementById('chartBoxplot').getContext('2d');
+new Chart(bp, {
+  type: 'bar',
+  data: {
+    labels: ['Min','Q1','Médiane','Q3','Max'],
+    datasets: [{
+      label: 'Valeur',
+      data: [stats.min, stats.q1, stats.mediane, stats.q3, stats.max],
+      backgroundColor: ['#dc3545','#fd7e14','#0d6efd','#fd7e14','#198754'],
+    }],
+  },
+  options: {
+    indexAxis: 'y',
+    scales: { x: { min: 0, max: 20 } },
+    plugins: { legend: { display: false } },
+  },
+});
+
+// Filtrage des notes
+$('#filtreNotes').on('change', function () {
+  const v = $(this).val();
+  $('#tableNotes tbody tr').each(function () {
+    const note = parseFloat($(this).data('note'));
+    let visible = true;
+    if (v === 'all') visible = true;
+    else if (v.startsWith('-')) visible = note < parseFloat(v.substring(1));
+    else visible = note >= parseFloat(v);
+    $(this).toggle(visible);
+  });
+});
+</script>
+{% endif %}
+{% endblock %}

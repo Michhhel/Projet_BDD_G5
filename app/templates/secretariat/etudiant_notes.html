@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}Notes — {{ etudiant.nom_complet }} — ENSEA{% endblock %}
+
+{% block content %}
+<h1 class="page-title">
+  <i class="bi bi-clipboard-data"></i> Notes de {{ etudiant.nom_complet }}
+</h1>
+
+<a href="{{ url_for('secretariat.etudiants') }}" class="btn btn-sm btn-outline-secondary mb-3">
+  <i class="bi bi-arrow-left"></i> Retour à la liste des étudiants
+</a>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-4"><strong>Email :</strong> {{ etudiant.email }}</div>
+      <div class="col-md-4"><strong>Total notes :</strong> {{ notes|length }}</div>
+      <div class="col-md-4"><strong>Moyenne générale :</strong>
+        {% set total = notes|sum(attribute='note') %}
+        {% if notes %}
+          <span class="badge bg-{{ (total/(notes|length))|mention_class }}">
+            {{ '%.2f'|format(total/(notes|length)) }}/20
+          </span>
+        {% else %}—{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    {% if notes %}
+    <table class="table table-hover datatable">
+      <thead>
+        <tr><th>Année</th><th>Classe</th><th>Matière</th><th>Évaluation</th>
+            <th>Note</th><th>Moyenne classe</th><th>Effectif</th></tr>
+      </thead>
+      <tbody>
+        {% for n in notes %}
+        <tr>
+          <td><small>{{ n.annee }}</small></td>
+          <td><span class="badge bg-primary">{{ n.classe }}</span></td>
+          <td><strong>{{ n.matiere }}</strong></td>
+          <td>{{ n.libelle }}</td>
+          <td><span class="badge bg-{{ n.note|mention_class }}">{{ '%.2f'|format(n.note) }}</span></td>
+          <td>{{ n.moyenne_classe|format_note }}</td>
+          <td>{{ n.effectif }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="text-muted text-center">Aucune note enregistrée pour cet étudiant.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

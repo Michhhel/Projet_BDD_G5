@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import btn_supprimer %}
+{% block title %}Années scolaires — ENSEA{% endblock %}
+
+{% block content %}
+<h1 class="page-title"><i class="bi bi-calendar3"></i> Années scolaires</h1>
+
+<div class="row">
+  <div class="col-md-4">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header"><i class="bi bi-plus-circle"></i> Nouvelle année</div>
+      <div class="card-body">
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            <label class="form-label">{{ form.libelle.label.text }}</label>
+            {{ form.libelle(class="form-control", placeholder="2025-2026") }}
+            {% for e in form.libelle.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+            <small class="text-muted">Format : YYYY-YYYY</small>
+          </div>
+          {{ form.submit(class="btn btn-primary w-100") }}
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-header"><i class="bi bi-list-ul"></i> Liste des années ({{ annees|length }})</div>
+      <div class="card-body">
+        <table class="table table-hover datatable">
+          <thead>
+            <tr><th>Libellé</th><th>Inscriptions</th><th>Enseignements</th><th class="text-end">Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for a in annees %}
+            <tr>
+              <td>
+                <a href="{{ url_for('secretariat.etudiants', annee_id=a.id) }}" class="text-decoration-none">
+                  <strong>{{ a.libelle }}</strong>
+                </a>
+              </td>
+              <td><span class="badge bg-primary">{{ stats[a.id].inscriptions }}</span></td>
+              <td><span class="badge bg-info">{{ stats[a.id].enseignements }}</span></td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                        data-bs-target="#editAnnee{{ a.id }}">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                {{ btn_supprimer(url_for('secretariat.supprimer_annee', annee_id=a.id),
+                                  csrf_token=action_form.csrf_token._value()) }}
+
+                <!-- Modal édition -->
+                <div class="modal fade" id="editAnnee{{ a.id }}" tabindex="-1">
+                  <div class="modal-dialog">
+                    <form method="POST" action="{{ url_for('secretariat.modifier_annee', annee_id=a.id) }}"
+                          class="modal-content">
+                      <input type="hidden" name="csrf_token" value="{{ action_form.csrf_token._value() }}">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Modifier l'année {{ a.libelle }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <input type="text" name="libelle" class="form-control" value="{{ a.libelle }}" required>
+                        <small class="text-muted">Format : YYYY-YYYY</small>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

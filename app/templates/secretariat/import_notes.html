@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block title %}Import de notes — ENSEA{% endblock %}
+
+{% block content %}
+<h1 class="page-title"><i class="bi bi-upload"></i> Import des notes</h1>
+
+<div class="row">
+  <div class="col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-header"><i class="bi bi-file-earmark-excel"></i> Charger un fichier</div>
+      <div class="card-body">
+        <form method="POST" enctype="multipart/form-data" id="importNotesForm" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            <label class="form-label">Enseignement / Classe</label>
+            {{ form.ens_classe_id(class="form-select", id="select_ec") }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Type de note</label>
+            {{ form.type_note_id(class="form-select", id="select_tn", disabled=True) }}
+            <small class="text-muted">Sera rempli après sélection de l'enseignement.</small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Fichier Excel (.xlsx, .xls, .csv)</label>
+            {{ form.fichier(class="form-control", id="fichier_input") }}
+            <small class="text-muted">Colonnes obligatoires : <code>email</code>, <code>note</code></small>
+          </div>
+          <button type="button" class="btn btn-outline-secondary mb-2" id="btnPreview">
+            <i class="bi bi-eye"></i> Prévisualiser les 5 premières lignes
+          </button>
+          {{ form.submit(class="btn btn-success w-100") }}
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card shadow-sm" id="previewCard" style="display:none">
+      <div class="card-header"><i class="bi bi-eye"></i> Prévisualisation</div>
+      <div class="card-body" id="previewBody"></div>
+    </div>
+
+    {% if rapport %}
+    <div class="card shadow-sm mt-3">
+      <div class="card-header text-bg-success"><i class="bi bi-check-circle"></i> Rapport d'import</div>
+      <div class="card-body">
+        <p><strong>Type de note :</strong> {{ rapport.type_note.libelle }}</p>
+        <ul>
+          <li>Total de lignes traitées : {{ rapport.total }}</li>
+          <li class="text-success">Notes créées : <strong>{{ rapport.crees }}</strong></li>
+          <li class="text-info">Notes mises à jour : <strong>{{ rapport.mis_a_jour }}</strong></li>
+          <li class="text-danger">Erreurs : <strong>{{ rapport.erreurs|length }}</strong></li>
+        </ul>
+        {% if rapport.erreurs %}
+        <details>
+          <summary class="text-danger">Voir les erreurs</summary>
+          <ul class="mt-2">
+            {% for err in rapport.erreurs %}<li><small>{{ err }}</small></li>{% endfor %}
+          </ul>
+        </details>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(function () {
+  const $ec = $('#select_ec');
+  const $tn = $('#select_tn');
+
+  $ec.on('change', function () {
+    const id = $(this).val();
+    $tn.empty().append('<option value="0">— Choisir —</option>').prop('disabled', true);
+    if (!id || id === '0') return;
+    $.getJSON("{{ url_for('secretariat.api_types_note', ec_id=0) }}".replace('0', id), function (data) {
+      if (!data.length) {
+        $tn.html('<option>Aucun type de note pour cet enseignement</option>');
+        return;
+      }
+      data.forEach(t => $tn.append(`<option value="${t.id}">${t.libelle}</option>`));
+      $tn.prop('disabled', false);
+    });
+  });
+
+  // Prévisualisation Ajax
+  $('#btnPreview').on('click', function () {
+    const f = $('#fichier_input')[0].files[0];
+    if (!f) { alert('Veuillez sélectionner un fichier.'); return; }
+    const fd = new FormData();
+    fd.append('fichier', f);
+    fd.append('csrf_token', $('input[name=csrf_token]').val());
+    $.ajax({
+      url: "{{ url_for('secretariat.previsualiser_notes') }}",
+      method: 'POST', data: fd, processData: false, contentType: false,
+      success: function (data) {
+        if (data.erreur) { alert(data.erreur); return; }
+        let html = `<p><strong>${data.total}</strong> ligne(s) au total. Aperçu :</p>`;
+        html += '<table class="table table-sm table-bordered"><thead><tr>';
+        data.colonnes.forEach(c => html += '<th>'+c+'</th>');
+        html += '</tr></thead><tbody>';
+        data.lignes.forEach(l => {
+          html += '<tr>';
+          data.colonnes.forEach(c => html += '<td>'+(l[c]||'')+'</td>');
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+        $('#previewBody').html(html);
+        $('#previewCard').show();
+      },
+      error: function () { alert('Erreur lors de la prévisualisation.'); },
+    });
+  });
+});
+</script>
+{% endblock %}

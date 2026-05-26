@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Changer mon mot de passe — ENSEA{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <a href="{{ url_for('etudiant.profil') }}" class="btn btn-sm btn-outline-secondary mb-3">
+      <i class="bi bi-arrow-left"></i> Retour au profil
+    </a>
+
+    <div class="card shadow-sm">
+      <div class="card-header"><i class="bi bi-key"></i> Changement de mot de passe</div>
+      <div class="card-body">
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            <label class="form-label">{{ form.ancien_mdp.label.text }}</label>
+            {{ form.ancien_mdp(class="form-control") }}
+            {% for e in form.ancien_mdp.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ form.nouveau_mdp.label.text }}</label>
+            {{ form.nouveau_mdp(class="form-control") }}
+            {% for e in form.nouveau_mdp.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+            <small class="text-muted">
+              8 caractères min, 1 majuscule, 1 minuscule, 1 chiffre,
+              1 spécial parmi : <code>- . _ @ + *</code>
+            </small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ form.confirmation.label.text }}</label>
+            {{ form.confirmation(class="form-control") }}
+            {% for e in form.confirmation.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+          </div>
+          {{ form.submit(class="btn btn-warning w-100") }}
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

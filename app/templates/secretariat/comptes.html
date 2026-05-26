@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import btn_supprimer %}
+{% block title %}Comptes secrétariat — ENSEA{% endblock %}
+
+{% block content %}
+<h1 class="page-title"><i class="bi bi-people"></i> Comptes secrétariat</h1>
+
+<div class="row">
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-header"><i class="bi bi-person-plus"></i> Nouveau compte</div>
+      <div class="card-body">
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="mb-2"><label class="form-label">Nom</label>{{ form.nom(class="form-control") }}</div>
+          <div class="mb-2"><label class="form-label">Prénom</label>{{ form.prenom(class="form-control") }}</div>
+          <div class="mb-2"><label class="form-label">Email</label>{{ form.email(class="form-control") }}</div>
+          <div class="mb-2"><label class="form-label">Mot de passe</label>{{ form.mot_de_passe(class="form-control") }}</div>
+          <div class="mb-3"><label class="form-label">Confirmation</label>{{ form.confirmation(class="form-control") }}</div>
+          {{ form.submit(class="btn btn-primary w-100") }}
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-header"><i class="bi bi-list-ul"></i> Comptes existants ({{ comptes|length }})</div>
+      <div class="card-body">
+        <table class="table table-hover datatable">
+          <thead><tr><th>Nom</th><th>Prénom</th><th>Email</th><th class="text-end">Actions</th></tr></thead>
+          <tbody>
+            {% for s in comptes %}
+            <tr {% if s.id == current_user.id %}class="table-info"{% endif %}>
+              <td><strong>{{ s.nom }}</strong></td>
+              <td>{{ s.prenom }}</td>
+              <td>{{ s.email }} {% if s.id == current_user.id %}<span class="badge bg-info">vous</span>{% endif %}</td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                        data-bs-target="#editS{{ s.id }}">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                {% if s.id != current_user.id %}
+                  {{ btn_supprimer(url_for('secretariat.supprimer_compte_secretariat', s_id=s.id),
+                                    csrf_token=action_form.csrf_token._value()) }}
+                {% endif %}
+
+                <div class="modal fade" id="editS{{ s.id }}" tabindex="-1">
+                  <div class="modal-dialog">
+                    <form method="POST" action="{{ url_for('secretariat.modifier_compte_secretariat', s_id=s.id) }}"
+                          class="modal-content">
+                      <input type="hidden" name="csrf_token" value="{{ action_form.csrf_token._value() }}">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Modifier {{ s.nom_complet }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="mb-2"><label class="form-label">Nom</label>
+                          <input type="text" name="nom" class="form-control" value="{{ s.nom }}" required></div>
+                        <div class="mb-2"><label class="form-label">Prénom</label>
+                          <input type="text" name="prenom" class="form-control" value="{{ s.prenom }}" required></div>
+                        <div class="mb-2"><label class="form-label">Email</label>
+                          <input type="email" name="email" class="form-control" value="{{ s.email }}" required></div>
+                      </div>
+                      <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

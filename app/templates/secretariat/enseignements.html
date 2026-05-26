@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import btn_supprimer %}
+{% block title %}Enseignements — ENSEA{% endblock %}
+
+{% block content %}
+<h1 class="page-title"><i class="bi bi-easel"></i> Enseignements</h1>
+
+<div class="row">
+  <div class="col-md-4">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header"><i class="bi bi-plus-circle"></i> Nouvel enseignement</div>
+      <div class="card-body">
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
+          <div class="mb-2"><label class="form-label">Enseignant</label>
+            {{ form.enseignant_id(class="form-select") }}</div>
+          <div class="mb-2"><label class="form-label">Matière</label>
+            {{ form.matiere_id(class="form-select") }}</div>
+          <div class="mb-3"><label class="form-label">Année scolaire</label>
+            {{ form.annee_scolaire_id(class="form-select") }}</div>
+          {{ form.submit(class="btn btn-primary w-100") }}
+        </form>
+      </div>
+    </div>
+    <div class="alert alert-info small">
+      <i class="bi bi-info-circle"></i>
+      Après création, associez une ou plusieurs <strong>classes</strong> à chaque enseignement
+      depuis la ligne du tableau.
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <i class="bi bi-list-ul"></i> Liste ({{ enseignements|length }})
+      </div>
+      <div class="card-body">
+        <table class="table table-hover">
+          <thead>
+            <tr><th>Année</th><th>Matière</th><th>Enseignant</th><th>Classes associées</th><th class="text-end">Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for ens in enseignements %}
+            <tr>
+              <td><span class="badge bg-secondary">{{ ens.annee_scolaire.libelle }}</span></td>
+              <td><strong>{{ ens.matiere.nom }}</strong></td>
+              <td>{{ ens.enseignant.nom_complet }}</td>
+              <td>
+                {% for ec in ens.enseignement_classes %}
+                  <span class="badge bg-primary me-1">
+                    {{ ec.classe.nom }}
+                    <form method="POST" action="{{ url_for('secretariat.retirer_classe_enseignement', ec_id=ec.id) }}"
+                          class="d-inline" onsubmit="return confirm('Retirer {{ ec.classe.nom }} ?');">
+                      <input type="hidden" name="csrf_token" value="{{ action_form.csrf_token._value() }}">
+                      <button class="btn btn-link p-0 text-white" style="font-size:.7rem"><i class="bi bi-x"></i></button>
+                    </form>
+                  </span>
+                {% endfor %}
+
+                <form method="POST" action="{{ url_for('secretariat.ajouter_classe_a_enseignement', ens_id=ens.id) }}"
+                      class="d-inline-flex align-items-center ms-2">
+                  <input type="hidden" name="csrf_token" value="{{ action_form.csrf_token._value() }}">
+                  <select name="classe_id" class="form-select form-select-sm me-1" style="width:auto" required>
+                    <option value="">+ classe</option>
+                    {% set classes_liees = ens.enseignement_classes | map(attribute='classe_id') | list %}
+                    {% for c in toutes_classes if c.id not in classes_liees %}
+                      <option value="{{ c.id }}">{{ c.nom }}</option>
+                    {% endfor %}
+                  </select>
+                  <button class="btn btn-sm btn-outline-success"><i class="bi bi-plus"></i></button>
+                </form>
+              </td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                        data-bs-target="#editEns{{ ens.id }}">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                {{ btn_supprimer(url_for('secretariat.supprimer_enseignement', ens_id=ens.id),
+                                  csrf_token=action_form.csrf_token._value()) }}
+
+                <div class="modal fade" id="editEns{{ ens.id }}" tabindex="-1">
+                  <div class="modal-dialog">
+                    <form method="POST" action="{{ url_for('secretariat.modifier_enseignement', ens_id=ens.id) }}"
+                          class="modal-content">
+                      <input type="hidden" name="csrf_token" value="{{ action_form.csrf_token._value() }}">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Modifier l'enseignement</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="mb-2"><label class="form-label">Enseignant</label>
+                          <select name="enseignant_id" class="form-select">
+                            {% for opt in form.enseignant_id.choices %}
+                              <option value="{{ opt[0] }}" {% if opt[0]==ens.enseignant_id %}selected{% endif %}>{{ opt[1] }}</option>
+                            {% endfor %}
+                          </select></div>
+                        <div class="mb-2"><label class="form-label">Matière</label>
+                          <select name="matiere_id" class="form-select">
+                            {% for opt in form.matiere_id.choices %}
+                              <option value="{{ opt[0] }}" {% if opt[0]==ens.matiere_id %}selected{% endif %}>{{ opt[1] }}</option>
+                            {% endfor %}
+                          </select></div>
+                        <div class="mb-2"><label class="form-label">Année</label>
+                          <select name="annee_scolaire_id" class="form-select">
+                            {% for opt in form.annee_scolaire_id.choices %}
+                              <option value="{{ opt[0] }}" {% if opt[0]==ens.annee_scolaire_id %}selected{% endif %}>{{ opt[1] }}</option>
+                            {% endfor %}
+                          </select></div>
+                      </div>
+                      <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

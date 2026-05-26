@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Exports — ENSEA{% endblock %}
+
+{% block content %}
+<h1 class="page-title"><i class="bi bi-download"></i> Exports</h1>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body text-center">
+        <i class="bi bi-file-earmark-zip display-2 text-primary"></i>
+        <h4 class="mt-3">Export complet</h4>
+        <p class="text-muted">
+          Toutes les tables (Secrétariat, Étudiants, Enseignants, Classes, Années,
+          Matières, Inscriptions, Enseignements, Notes) dans un seul fichier Excel
+          multi-onglets.
+        </p>
+        <a href="{{ url_for('secretariat.export_global') }}" class="btn btn-primary btn-lg">
+          <i class="bi bi-download"></i> Télécharger l'export global
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h4><i class="bi bi-info-circle"></i> À propos</h4>
+        <p>L'export Excel contient :</p>
+        <ul>
+          <li>Tous les comptes secrétariat</li>
+          <li>Tous les étudiants et leurs informations</li>
+          <li>Tous les enseignants (référentiel)</li>
+          <li>Classes, années, matières</li>
+          <li>Inscriptions et enseignements</li>
+          <li>Toutes les notes saisies</li>
+        </ul>
+        <p class="text-muted small">
+          Utile pour sauvegarder l'état complet de la base avant une migration
+          ou un changement majeur.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
