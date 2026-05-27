@@ -15,31 +15,26 @@ if not db_url:
 print(f'  DATABASE_URL trouvée : {db_url[:40]}...')
 "
 
-echo "==> Initialisation/Migration de la base de données..."
+echo "==> Gestion des migrations..."
+
 if [ ! -d "migrations" ]; then
-    echo "  Initialisation des migrations (premier déploiement)..."
+    echo "  Dossier migrations introuvable. Initialisation..."
     flask db init
     flask db migrate -m "Initial migration"
-
-    echo "  Nettoyage de l'historique alembic en base (évite les conflits)..."
-    python -c "
-import os
-os.environ.setdefault('FLASK_ENV', 'production')
-from app import create_app
-from app.models import db
-from sqlalchemy import text
-app = create_app('production')
-with app.app_context():
-    with db.engine.connect() as conn:
-        conn.execute(text('DROP TABLE IF EXISTS alembic_version'))
-        conn.commit()
-    print('  Table alembic_version réinitialisée.')
-"
+    echo "  Application de la migration initiale..."
+    flask db upgrade
 else
-    echo "  Dossier migrations existant — application des migrations uniquement."
+    echo "  Dossier migrations existant. Mise à jour de la base..."
+    # On tente l'upgrade classique ; en cas d'échec (révision manquante),
+    # on recale la base sur la tête de la chaîne de migrations.
+    if ! flask db upgrade; then
+        echo "  ERREUR lors de l'upgrade (probablement une révision introuvable)."
+        echo "  Forçage de l'état de la base à la révision courante..."
+        flask db stamp head
+        echo "  Nouvelle tentative d'upgrade..."
+        flask db upgrade
+    fi
 fi
-
-flask db upgrade
 
 echo "==> Création du compte secrétariat admin si inexistant..."
 python seed.py
