@@ -171,3 +171,17 @@ flask db upgrade
 - Toute suppression d'une **note** est interdite (règle métier renforcée par event listener).
 - Les imports Excel produisent un **rapport détaillé** (créés, mis à jour, ignorés, erreurs).
 - Les statistiques sont recalculées **à la volée** à chaque visualisation.
+
+# A ignorer
+Dans le terminal, à la racine du projet (là où se trouve run.py), exécutez :
+flask db migrate -m "Ajout de la colonne email au modèle Utilisateur"
+Appliquez la migration sur votre base locale pour valider :
+flask db upgrade
+
+5. Commiter et pousser les fichiers de migration
+
+6. Déploiement automatique sur Render
+Une fois le push effectué sur GitHub, Render détecte le changement et lance un nouveau build.
+Le script build.sh (la version recommandée que je vous ai donnée) exécute flask db upgrade, ce qui applique la nouvelle migration à la base de production.
+
+La table alembic_version sur Render passe à la nouvelle révision, et la structure est mise à jour sans perte de données.
