@@ -16,14 +16,29 @@ print(f'  DATABASE_URL trouvée : {db_url[:40]}...')
 "
 
 echo "==> Initialisation/Migration de la base de données..."
-# Si le dossier migrations n'existe pas encore, on l'initialise
 if [ ! -d "migrations" ]; then
-    echo "  Premier déploiement : initialisation des migrations..."
+    echo "  Initialisation des migrations (premier déploiement)..."
     flask db init
     flask db migrate -m "Initial migration"
+
+    echo "  Nettoyage de l'historique alembic en base (évite les conflits)..."
+    python -c "
+import os
+os.environ.setdefault('FLASK_ENV', 'production')
+from app import create_app
+from app.models import db
+from sqlalchemy import text
+app = create_app('production')
+with app.app_context():
+    with db.engine.connect() as conn:
+        conn.execute(text('DROP TABLE IF EXISTS alembic_version'))
+        conn.commit()
+    print('  Table alembic_version réinitialisée.')
+"
 else
-    echo "  Dossier migrations existant, application des migrations..."
+    echo "  Dossier migrations existant — application des migrations uniquement."
 fi
+
 flask db upgrade
 
 echo "==> Création du compte secrétariat admin si inexistant..."
