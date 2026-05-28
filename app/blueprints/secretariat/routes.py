@@ -660,6 +660,7 @@ def etudiants():
             ))
             db.session.commit()
 
+            # Envoi email non-bloquant : un échec SMTP ne doit PAS causer un 500
             try:
                 envoyer_nouveau_compte(
                     etu, mdp_clair,
@@ -669,13 +670,11 @@ def etudiants():
                     f'Étudiant créé. Mot de passe envoyé à {etu.email}.',
                     'success',
                 )
-            except Exception as e:
-                current_app.logger.error(
-                    f"Échec envoi email (nouveau compte) pour {etu.email} : {e}"
-                )
+            except Exception as e_mail:
+                current_app.logger.warning(f'Email non envoyé à {etu.email} : {e_mail}')
                 flash(
-                    f'Étudiant créé. ⚠️ L\'email n\'a pas pu être envoyé. '
-                    f'Mot de passe temporaire : {mdp_clair}',
+                    f'Étudiant créé avec succès, mais l\'envoi du mail a échoué '
+                    f'({etu.email}). Mot de passe généré : {mdp_clair}',
                     'warning',
                 )
             return redirect(url_for('secretariat.etudiants'))
@@ -749,22 +748,17 @@ def reset_mdp_etudiant(etu_id):
     mdp_clair, mdp_hash = generer_mot_de_passe_etudiant()
     etu.mot_de_passe_hash = mdp_hash
     db.session.commit()
-
     try:
         envoyer_nouveau_mot_de_passe(etu, mdp_clair)
         flash(
-            f'Mot de passe réinitialisé et envoyé par email à {etu.email}. '
-            f'Mot de passe : {mdp_clair}',
-            'success',
+            f'Mot de passe réinitialisé et envoyé à {etu.email}. '
+            f'Nouveau mot de passe : {mdp_clair}', 'success',
         )
-    except Exception as e:
-        current_app.logger.error(
-            f"Échec envoi email (reset mdp) pour {etu.email} : {e}"
-        )
+    except Exception as e_mail:
+        current_app.logger.warning(f'Email reset non envoyé à {etu.email} : {e_mail}')
         flash(
-            f'Mot de passe réinitialisé. ⚠️ L\'email n\'a pas pu être envoyé. '
-            f'Nouveau mot de passe : {mdp_clair} — notez-le bien.',
-            'warning',
+            f'Mot de passe réinitialisé : {mdp_clair} '
+            f'(envoi email échoué — communiquer ce mot de passe manuellement).', 'warning',
         )
     return redirect(url_for('secretariat.etudiants'))
 
@@ -828,9 +822,12 @@ def importer_etudiants():
                     etu, mdp_clair,
                     url_connexion=url_for('auth.login_etudiant', _external=True),
                 )
-            except Exception as e:
-                current_app.logger.error(
-                    f"Échec envoi email (import) pour {etu.email} : {e}"
+            except Exception as e_mail:
+                current_app.logger.warning(
+                    f'Email non envoyé à {etu.email} : {e_mail}'
+                )
+                avertissements.append(
+                    f'{etu.email} : compte créé, mail non envoyé (mdp: {mdp_clair})'
                 )
             crees += 1
         except Exception as exc:

@@ -2,6 +2,7 @@
 # app/utils/email_utils.py – Envoi d'emails (avec fallback console)
 # =============================================================================
 
+import socket
 from flask import current_app, render_template_string
 from flask_mail import Message
 
@@ -74,10 +75,15 @@ Le secrétariat de l'ENSEA
 def _envoyer(sujet: str, destinataires: list[str], corps: str) -> bool:
     """Envoie un email ou, en l'absence de configuration SMTP, l'affiche en console.
 
-    Renvoie True si « envoi réussi » (= bien parti ou bien affiché en console).
+    IMPORTANT : en production, re-lève l'exception en cas d'échec SMTP
+    pour que les routes puissent afficher un message flash au lieu d'un 500.
     """
-    if current_app.config.get('MAIL_SUPPRESS_SEND', True):
-        # Mode dev : pas de SMTP, on affiche dans la console
+    # ── Mode développement : MAIL_SUPPRESS_SEND=True ou MAIL_USERNAME absent ──
+    # On affiche dans la console sans toucher au SMTP.
+    suppress = current_app.config.get('MAIL_SUPPRESS_SEND', False)
+    username = current_app.config.get('MAIL_USERNAME', '')
+
+    if suppress or not username:
         print('\n' + '=' * 70)
         print(f'[EMAIL SIMULÉ] Sujet : {sujet}')
         print(f'À : {", ".join(destinataires)}')
@@ -85,6 +91,11 @@ def _envoyer(sujet: str, destinataires: list[str], corps: str) -> bool:
         print(corps)
         print('=' * 70 + '\n')
         return True
+
+    # ── Mode production : envoi SMTP réel avec timeout de 10 secondes ────────
+    # Sans timeout, une connexion SMTP qui traîne bloque la requête Flask
+    # jusqu'à ce que Render la tue → Internal Server Error.
+    socket.setdefaulttimeout(10)
 
     try:
         from app import mail
@@ -95,14 +106,21 @@ def _envoyer(sujet: str, destinataires: list[str], corps: str) -> bool:
             sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
         )
         mail.send(msg)
+        current_app.logger.info(f'Email envoyé à {", ".join(destinataires)} : {sujet}')
         return True
+
     except Exception as exc:
-        current_app.logger.error(f'Erreur envoi email : {exc}')
-        return False
+        # On logue ET on re-lève : le routes.py attrape l'exception
+        # et affiche un flash warning au lieu de planter avec un 500.
+        current_app.logger.error(
+            f'Échec envoi email à {", ".join(destinataires)} '
+            f'({type(exc).__name__}) : {exc}'
+        )
+        raise
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Fonctions publiques
+# Fonctions publiques – signatures inchangées
 # ─────────────────────────────────────────────────────────────────────────────
 
 def envoyer_nouveau_compte(etudiant, mot_de_passe_clair: str, url_connexion: str) -> bool:
