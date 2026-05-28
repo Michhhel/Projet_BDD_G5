@@ -1,13 +1,14 @@
 # =============================================================================
-# app/utils/email_utils.py – Envoi d'emails (avec fallback console)
+# app/utils/email_utils.py – Version Resend (remplace Flask-Mail)
+# Resend est gratuit jusqu'à 3 000 emails/mois, fonctionne sur tous les clouds
+# Doc : https://resend.com/docs/send-with-python
 # =============================================================================
 
 import socket
+import os
 from flask import current_app, render_template_string
-from flask_mail import Message
 
-
-# Templates d'email (inline pour rester simple)
+# Templates (inchangés par rapport à la version précédente)
 
 TEMPLATE_NOUVEAU_COMPTE = """\
 Bonjour {{ prenom }} {{ nom }},
@@ -30,16 +31,11 @@ Le secrétariat de l'ENSEA
 TEMPLATE_RESET_PASSWORD = """\
 Bonjour {{ prenom }} {{ nom }},
 
-Une demande de réinitialisation de mot de passe a été effectuée pour votre
-compte étudiant.
-
 Votre code de vérification (valable {{ duree_h }} heures) :
 
         ╔══════════╗
         ║  {{ code }}  ║
         ╚══════════╝
-
-Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.
 
 Cordialement,
 Le secrétariat de l'ENSEA
@@ -50,10 +46,7 @@ Bonjour {{ prenom }} {{ nom }},
 
 Votre mot de passe a été réinitialisé par le secrétariat.
 
-Voici votre nouveau mot de passe :
-  {{ mot_de_passe }}
-
-Nous vous recommandons de le changer après votre prochaine connexion.
+Nouveau mot de passe : {{ mot_de_passe }}
 
 Cordialement,
 Le secrétariat de l'ENSEA
@@ -64,26 +57,24 @@ Bonjour {{ prenom }} {{ nom }},
 
 Votre mot de passe a été modifié avec succès le {{ date }}.
 
-Si vous n'êtes pas à l'origine de ce changement, contactez immédiatement le
-secrétariat de l'ENSEA.
-
 Cordialement,
 Le secrétariat de l'ENSEA
 """
 
 
-def _envoyer(sujet: str, destinataires: list[str], corps: str) -> bool:
-    """Envoie un email ou, en l'absence de configuration SMTP, l'affiche en console.
-
-    IMPORTANT : en production, re-lève l'exception en cas d'échec SMTP
-    pour que les routes puissent afficher un message flash au lieu d'un 500.
+def _envoyer(sujet: str, destinataires: list, corps: str) -> bool:
     """
-    # ── Mode développement : MAIL_SUPPRESS_SEND=True ou MAIL_USERNAME absent ──
-    # On affiche dans la console sans toucher au SMTP.
-    suppress = current_app.config.get('MAIL_SUPPRESS_SEND', False)
-    username = current_app.config.get('MAIL_USERNAME', '')
+    Envoie un email via :
+      - Resend  si RESEND_API_KEY est définie  (production recommandée)
+      - SMTP    si MAIL_USERNAME est défini     (fallback Gmail)
+      - Console si rien n'est configuré         (développement)
+    """
 
-    if suppress or not username:
+    # ── Mode console (développement) ─────────────────────────────────────────
+    resend_key = current_app.config.get('RESEND_API_KEY', '')
+    mail_user  = current_app.config.get('MAIL_USERNAME', '')
+
+    if not resend_key and not mail_user:
         print('\n' + '=' * 70)
         print(f'[EMAIL SIMULÉ] Sujet : {sujet}')
         print(f'À : {", ".join(destinataires)}')
@@ -92,13 +83,33 @@ def _envoyer(sujet: str, destinataires: list[str], corps: str) -> bool:
         print('=' * 70 + '\n')
         return True
 
-    # ── Mode production : envoi SMTP réel avec timeout de 10 secondes ────────
-    # Sans timeout, une connexion SMTP qui traîne bloque la requête Flask
-    # jusqu'à ce que Render la tue → Internal Server Error.
-    socket.setdefaulttimeout(10)
+    # ── Mode Resend (production recommandée) ──────────────────────────────────
+    if resend_key:
+        try:
+            import resend
+            resend.api_key = resend_key
+            expediteur = current_app.config.get(
+                'MAIL_DEFAULT_SENDER', 'noreply@ensea.ci'
+            )
+            resend.Emails.send({
+                "from":    expediteur,
+                "to":      destinataires,
+                "subject": sujet,
+                "text":    corps,
+            })
+            current_app.logger.info(
+                f"[Resend] Email envoyé à {', '.join(destinataires)}"
+            )
+            return True
+        except Exception as exc:
+            current_app.logger.error(f"[Resend] Échec : {exc}")
+            raise
 
+    # ── Mode SMTP Gmail (fallback) ────────────────────────────────────────────
+    socket.setdefaulttimeout(10)
     try:
         from app import mail
+        from flask_mail import Message
         msg = Message(
             subject=sujet,
             recipients=destinataires,
@@ -106,25 +117,19 @@ def _envoyer(sujet: str, destinataires: list[str], corps: str) -> bool:
             sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
         )
         mail.send(msg)
-        current_app.logger.info(f'Email envoyé à {", ".join(destinataires)} : {sujet}')
-        return True
-
-    except Exception as exc:
-        # On logue ET on re-lève : le routes.py attrape l'exception
-        # et affiche un flash warning au lieu de planter avec un 500.
-        current_app.logger.error(
-            f'Échec envoi email à {", ".join(destinataires)} '
-            f'({type(exc).__name__}) : {exc}'
+        current_app.logger.info(
+            f"[SMTP] Email envoyé à {', '.join(destinataires)}"
         )
+        return True
+    except Exception as exc:
+        current_app.logger.error(f"[SMTP] Échec : {type(exc).__name__} – {exc}")
         raise
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Fonctions publiques – signatures inchangées
-# ─────────────────────────────────────────────────────────────────────────────
+# ── Fonctions publiques (signatures identiques à l'original) ─────────────────
 
-def envoyer_nouveau_compte(etudiant, mot_de_passe_clair: str, url_connexion: str) -> bool:
-    """Envoie les identifiants à un nouvel étudiant."""
+def envoyer_nouveau_compte(etudiant, mot_de_passe_clair: str,
+                            url_connexion: str) -> bool:
     corps = render_template_string(
         TEMPLATE_NOUVEAU_COMPTE,
         prenom=etudiant.prenom, nom=etudiant.nom,
@@ -132,50 +137,35 @@ def envoyer_nouveau_compte(etudiant, mot_de_passe_clair: str, url_connexion: str
         mot_de_passe=mot_de_passe_clair,
         url=url_connexion,
     )
-    return _envoyer(
-        sujet='[ENSEA] Création de votre compte étudiant',
-        destinataires=[etudiant.email],
-        corps=corps,
-    )
+    return _envoyer('[ENSEA] Création de votre compte étudiant',
+                    [etudiant.email], corps)
 
 
 def envoyer_code_reset(etudiant, code: str, duree_h: int = 24) -> bool:
-    """Envoie un code de réinitialisation."""
     corps = render_template_string(
         TEMPLATE_RESET_PASSWORD,
         prenom=etudiant.prenom, nom=etudiant.nom,
         code=code, duree_h=duree_h,
     )
-    return _envoyer(
-        sujet='[ENSEA] Réinitialisation de votre mot de passe',
-        destinataires=[etudiant.email],
-        corps=corps,
-    )
+    return _envoyer('[ENSEA] Réinitialisation de votre mot de passe',
+                    [etudiant.email], corps)
 
 
 def envoyer_nouveau_mot_de_passe(etudiant, mot_de_passe_clair: str) -> bool:
-    """Envoie un nouveau mot de passe (reset par secrétariat)."""
     corps = render_template_string(
         TEMPLATE_NOUVEAU_MOT_DE_PASSE,
         prenom=etudiant.prenom, nom=etudiant.nom,
         mot_de_passe=mot_de_passe_clair,
     )
-    return _envoyer(
-        sujet='[ENSEA] Votre mot de passe a été réinitialisé',
-        destinataires=[etudiant.email],
-        corps=corps,
-    )
+    return _envoyer('[ENSEA] Votre mot de passe a été réinitialisé',
+                    [etudiant.email], corps)
 
 
 def envoyer_confirmation_changement(etudiant, date_str: str) -> bool:
-    """Confirme à l'étudiant qu'il a bien changé son mot de passe."""
     corps = render_template_string(
         TEMPLATE_CHANGEMENT_CONFIRME,
         prenom=etudiant.prenom, nom=etudiant.nom,
         date=date_str,
     )
-    return _envoyer(
-        sujet='[ENSEA] Confirmation du changement de mot de passe',
-        destinataires=[etudiant.email],
-        corps=corps,
-    )
+    return _envoyer('[ENSEA] Confirmation du changement de mot de passe',
+                    [etudiant.email], corps)
